@@ -1,0 +1,76 @@
+{
+  "name": "guidedog",
+  "displayName": "guidedog",
+  "description": "guidedog outline for vs code",
+  "version": "0.0.1",
+  "publisher": "rubennic",
+  "enableProposedApi": true,
+  "engines": {
+    "vscode": "^1.39.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:a11yTree",
+    "onLanguage:html"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "a11yTree",
+          "name": "a11y Tree",
+          "when": "a11yTreeEnabled"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "a11yTree.refresh",
+        "title": "Refresh",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        }
+      },
+      {
+        "command": "a11yTree.switch",
+        "title": "Switch",
+        "icon": {
+          "light": "resources/light/boolean.svg",
+          "dark": "resources/dark/boolean.svg"
+        }
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "a11yTree.refresh",
+          "when": "view == a11yTree",
+          "group": "navigation"
+        },
+        {
+          "command": "a11yTree.switch",
+          "when": "view == a11yTree",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^10.12.21",
+    "@types/vscode": "^1.39.0",
+    "typescript": "^3.5.1",
+    "tslint": "^5.12.1"
+  },
+  "dependencies": {
+    "@rubennic/guidedog": "0.0.8"
+  }
+}
