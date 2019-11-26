@@ -5,7 +5,6 @@
   "version": "0.0.1",
   "publisher": "rubennic",
   "license": "MIT",
-  "enableProposedApi": true,
   "galleryBanner": {
     "color": "#FFFFFF",
     "theme": "light"
