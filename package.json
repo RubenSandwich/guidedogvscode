@@ -4,13 +4,23 @@
   "description": "guidedog outline for vs code",
   "version": "0.0.1",
   "publisher": "rubennic",
+  "license": "MIT",
   "enableProposedApi": true,
+  "galleryBanner": {
+    "color": "#FFFFFF",
+    "theme": "light"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RubenSandwich/guidedogvscode.git"
+  },
   "engines": {
     "vscode": "^1.39.0"
   },
   "categories": [
     "Other"
   ],
+  "keywords": [],
   "activationEvents": [
     "onView:a11yTree",
     "onLanguage:html"
