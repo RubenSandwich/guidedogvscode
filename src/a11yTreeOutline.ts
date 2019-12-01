@@ -7,6 +7,7 @@ interface a11yNode {
   role: string;
   name: string;
   level: number;
+  type?: string;
 }
 
 export class A11yTreeOutlineProvider
@@ -29,6 +30,7 @@ export class A11yTreeOutlineProvider
     vscode.workspace.onDidChangeTextDocument(e => this.onDocumentChanged(e));
 
     this.treeName = treeName;
+    this.updateFilterType(treeName);
     this.parseTree();
     this.onActiveEditorChanged();
   }
@@ -42,9 +44,7 @@ export class A11yTreeOutlineProvider
     }
   }
 
-  switchView(treeType: string): void {
-    this.treeName = treeType;
-
+  updateFilterType(treeType: string): void {
     switch (treeType) {
       case "Screen Reader": {
         this.filterType = GuideDogFilter.OnlyInteresting;
@@ -59,6 +59,12 @@ export class A11yTreeOutlineProvider
         break;
       }
     }
+  }
+
+  switchView(treeType: string): void {
+    this.treeName = treeType;
+
+    this.updateFilterType(treeType);
 
     this.parseTree();
     this._onDidChangeTreeData.fire();
@@ -116,17 +122,21 @@ export class A11yTreeOutlineProvider
     }
   }
 
-  // required
-  getChildren(element?: a11yNode): Thenable<a11yNode[]> {
+  // Starts here, falls back into if TreeItem.Expanded
+  getChildren(a11yNode?: a11yNode): Thenable<a11yNode[]> {
     this.editor = vscode.window.activeTextEditor;
     if (this.editor && this.editor.document) {
-      const text = this.editor.document.getText();
+      if (a11yNode) {
+        const text = this.editor.document.getText();
 
-      return Promise.resolve(
-        guideDog(text, {
-          filterType: this.filterType
-        })
-      );
+        return Promise.resolve(
+          guideDog(text, {
+            filterType: this.filterType
+          })
+        );
+      } else {
+        return Promise.resolve([{ name: this.treeName, type: "root" }]);
+      }
     }
 
     return Promise.resolve([]);
@@ -135,7 +145,16 @@ export class A11yTreeOutlineProvider
   // required
   getTreeItem(a11yNode: a11yNode): vscode.TreeItem {
     const name = a11yNode.name === "" ? a11yNode.role : a11yNode.name;
-    let treeItem: vscode.TreeItem = new vscode.TreeItem(name);
+    let treeItem: vscode.TreeItem = new vscode.TreeItem(
+      name,
+      a11yNode.type === "root"
+        ? vscode.TreeItemCollapsibleState.Expanded
+        : vscode.TreeItemCollapsibleState.None
+    );
+
+    if (a11yNode.type) {
+      return treeItem;
+    }
 
     if (a11yNode.level) {
       treeItem.description = `${a11yNode.role} ${a11yNode.level}`;
