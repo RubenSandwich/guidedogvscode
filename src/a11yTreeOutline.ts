@@ -15,18 +15,20 @@ export class A11yTreeOutlineProvider
   readonly onDidChangeTreeData: vscode.Event<a11yNode | null> = this
     ._onDidChangeTreeData.event;
 
+  private treeName: string;
   private tree: a11yNode[];
   private text: string;
   private editor: vscode.TextEditor;
   private filterType = GuideDogFilter.OnlyInteresting;
 
-  constructor(private context: vscode.ExtensionContext) {
+  constructor(private context: vscode.ExtensionContext, treeName: string) {
     vscode.window.onDidChangeActiveTextEditor(() =>
       this.onActiveEditorChanged()
     );
 
     vscode.workspace.onDidChangeTextDocument(e => this.onDocumentChanged(e));
 
+    this.treeName = treeName;
     this.parseTree();
     this.onActiveEditorChanged();
   }
@@ -40,31 +42,26 @@ export class A11yTreeOutlineProvider
     }
   }
 
-  switchView(): string {
-    let title = "";
+  switchView(treeType: string): void {
+    this.treeName = treeType;
 
-    switch (this.filterType) {
-      case GuideDogFilter.OnlyInteresting: {
-        title = "landmarks";
+    switch (treeType) {
+      case "Screen Reader": {
+        this.filterType = GuideDogFilter.OnlyInteresting;
+        break;
+      }
+      case "Landmarks": {
         this.filterType = GuideDogFilter.OnlyLandmarks;
         break;
       }
-      case GuideDogFilter.OnlyLandmarks: {
-        title = "tabbable elements";
+      case "Tabbable": {
         this.filterType = GuideDogFilter.OnlyTabableElements;
-        break;
-      }
-      case GuideDogFilter.OnlyTabableElements: {
-        title = '"interesting" elements';
-        this.filterType = GuideDogFilter.OnlyInteresting;
         break;
       }
     }
 
     this.parseTree();
     this._onDidChangeTreeData.fire();
-
-    return title;
   }
 
   private onActiveEditorChanged(): void {

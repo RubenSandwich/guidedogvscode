@@ -45,12 +45,16 @@
         }
       },
       {
-        "command": "a11yTree.switch",
-        "title": "Switch",
-        "icon": {
-          "light": "resources/light/boolean.svg",
-          "dark": "resources/dark/boolean.svg"
-        }
+        "command": "a11yTree.switchToScreenReaderTree",
+        "title": "Switch to Screen Reader"
+      },
+      {
+        "command": "a11yTree.switchToLandmarkTree",
+        "title": "Switch to Landmarks"
+      },
+      {
+        "command": "a11yTree.switchToTabbableTree",
+        "title": "Switch to Tabbable Elements"
       }
     ],
     "menus": {
@@ -61,11 +65,40 @@
           "group": "navigation"
         },
         {
-          "command": "a11yTree.switch",
-          "when": "view == a11yTree",
-          "group": "navigation"
+          "command": "a11yTree.switchToScreenReaderTree",
+          "when": "view == a11yTree && guide-dog-tree-Type != 'Screen Reader'"
+        },
+        {
+          "command": "a11yTree.switchToLandmarkTree",
+          "when": "view == a11yTree && guide-dog-tree-Type != 'Landmarks'"
+        },
+        {
+          "command": "a11yTree.switchToTabbableTree",
+          "when": "view == a11yTree && guide-dog-tree-Type != 'Tabbable'"
         }
       ]
+    },
+    "configuration": {
+      "type": "object",
+      "title": "guidedog",
+      "properties": {
+        "guidedog.treeType": {
+          "type": "string",
+          "enum": [
+            "Screen Reader",
+            "Landmarks",
+            "Tabbable"
+          ],
+          "markdownEnumDescriptions": [
+            "Only show the scanning status in the status bar",
+            "Show the total number of TODOs in the status bar",
+            "Show a breakdown of the count of each tag in the status bar",
+            "Show the count of the top three tags in the status bar"
+          ],
+          "default": "Screen Reader",
+          "markdownDescription": "What to show in the status bar - nothing, total count, or counts per tag"
+        }
+      }
     }
   },
   "scripts": {

@@ -1,29 +1,59 @@
-'use strict';
+"use strict";
 
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
-import { A11yTreeOutlineProvider } from './a11yTreeOutline';
+import { A11yTreeOutlineProvider } from "./a11yTreeOutline";
+
+const updateContext = (updateTreeType: string) => {
+  vscode.commands.executeCommand(
+    "setContext",
+    "guide-dog-tree-Type",
+    updateTreeType
+  );
+};
+
+const updateA11yTree = treeProvider => (updateTreeType: string) => {
+  updateContext(updateTreeType);
+  treeProvider.switchView(updateTreeType);
+
+  vscode.workspace
+    .getConfiguration("guidedog")
+    .update("treeType", updateTreeType);
+};
 
 export function activate(context: vscode.ExtensionContext) {
-	const a11yTreeOutlineProvider = new A11yTreeOutlineProvider(context);
+  const config = vscode.workspace.getConfiguration("guidedog");
 
-	const a11yTree = vscode.window.createTreeView('a11yTree', {
-		treeDataProvider: a11yTreeOutlineProvider
-	});
+  updateContext(config.treeType);
 
-	vscode.commands.registerCommand('a11yTree.refresh', () =>
-		a11yTreeOutlineProvider.refresh()
-	);
+  const a11yTreeOutlineProvider = new A11yTreeOutlineProvider(
+    context,
+    config.treeType
+  );
 
-	vscode.commands.registerCommand('a11yTree.switch', () => {
-		const title = a11yTreeOutlineProvider.switchView();
+  vscode.window.createTreeView("a11yTree", {
+    treeDataProvider: a11yTreeOutlineProvider
+  });
 
-		vscode.window.showInformationMessage(`a11yTree switched to show ${title}`);
-		// TODO: Used in the perposed API
-		// a11yTree.message = `a11yTree ${title}`;
-	});
+  vscode.commands.registerCommand("a11yTree.refresh", () =>
+    a11yTreeOutlineProvider.refresh()
+  );
 
-	vscode.commands.registerCommand('extension.openA11yTreeSelection', range =>
-		a11yTreeOutlineProvider.select(range)
-	);
+  const updateA11yTreeView = updateA11yTree(a11yTreeOutlineProvider);
+
+  vscode.commands.registerCommand("a11yTree.switchToScreenReaderTree", () => {
+    updateA11yTreeView("Screen Reader");
+  });
+
+  vscode.commands.registerCommand("a11yTree.switchToLandmarkTree", () => {
+    updateA11yTreeView("Landmarks");
+  });
+
+  vscode.commands.registerCommand("a11yTree.switchToTabbableTree", () => {
+    updateA11yTreeView("Tabbable");
+  });
+
+  vscode.commands.registerCommand("extension.openA11yTreeSelection", range => {
+    a11yTreeOutlineProvider.select(range);
+  });
 }
