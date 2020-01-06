@@ -85,9 +85,7 @@
         "guidedog.treeType": {
           "type": "string",
           "enum": [
-            "Screen Reader",
-            "Landmarks",
-            "Tabbable"
+            "Headers"
           ],
           "markdownEnumDescriptions": [
             "Only show the scanning status in the status bar",
@@ -95,7 +93,7 @@
             "Show a breakdown of the count of each tag in the status bar",
             "Show the count of the top three tags in the status bar"
           ],
-          "default": "Screen Reader",
+          "default": "Headers",
           "markdownDescription": "What to show in the status bar - nothing, total count, or counts per tag"
         }
       }
@@ -109,10 +107,10 @@
   "devDependencies": {
     "@types/node": "^10.12.21",
     "@types/vscode": "^1.39.0",
-    "typescript": "^3.5.1",
-    "tslint": "^5.12.1"
+    "tslint": "^5.12.1",
+    "typescript": "^3.5.1"
   },
   "dependencies": {
-    "@rubennic/guidedog": "0.0.8"
+    "@rubennic/guidedog": "git://github.com/RubenSandwich/guidedog.git#parser-rewrite"
   }
 }

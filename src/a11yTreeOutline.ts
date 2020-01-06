@@ -1,85 +1,74 @@
-import * as vscode from "vscode";
+import * as vscode from 'vscode';
 
-import { guideDog, GuideDogFilter } from "@rubennic/guidedog";
-
-interface a11yNode {
-  html: string;
-  role: string;
-  name: string;
-  level: number;
-  type?: string;
-}
+import {
+  guideDog,
+  GuideDogFilter,
+  AccessibleNodeWithSource,
+} from '@rubennic/guidedog';
 
 export class A11yTreeOutlineProvider
-  implements vscode.TreeDataProvider<a11yNode> {
-  private _onDidChangeTreeData: vscode.EventEmitter<a11yNode | null> = new vscode.EventEmitter<a11yNode | null>();
-  readonly onDidChangeTreeData: vscode.Event<a11yNode | null> = this
+  implements vscode.TreeDataProvider<AccessibleNodeWithSource> {
+  private _onDidChangeTreeData: vscode.EventEmitter<AccessibleNodeWithSource | null> = new vscode.EventEmitter<AccessibleNodeWithSource | null>();
+  readonly onDidChangeTreeData: vscode.Event<AccessibleNodeWithSource | null> = this
     ._onDidChangeTreeData.event;
 
-  private treeName: string;
-  private tree: a11yNode[];
+  private tree: AccessibleNodeWithSource[];
   private text: string;
   private editor: vscode.TextEditor;
-  private filterType = GuideDogFilter.OnlyInteresting;
+  private filterType = GuideDogFilter.Headers;
 
-  constructor(private context: vscode.ExtensionContext, treeName: string) {
+  constructor(private context: vscode.ExtensionContext) {
     vscode.window.onDidChangeActiveTextEditor(() =>
-      this.onActiveEditorChanged()
+      this.onActiveEditorChanged(),
     );
 
     vscode.workspace.onDidChangeTextDocument(e => this.onDocumentChanged(e));
 
-    this.treeName = treeName;
-    this.updateFilterType(treeName);
-    this.parseTree();
+    // this.updateFilterType(treeName);
     this.onActiveEditorChanged();
   }
 
-  refresh(a11yNode?: a11yNode): void {
+  refresh(a11yNode?: AccessibleNodeWithSource): void {
     this.parseTree();
-    if (a11yNode) {
-      this._onDidChangeTreeData.fire(a11yNode);
-    } else {
-      this._onDidChangeTreeData.fire();
-    }
-  }
 
-  updateFilterType(treeType: string): void {
-    switch (treeType) {
-      case "Screen Reader": {
-        this.filterType = GuideDogFilter.OnlyInteresting;
-        break;
-      }
-      case "Landmarks": {
-        this.filterType = GuideDogFilter.OnlyLandmarks;
-        break;
-      }
-      case "Tabbable": {
-        this.filterType = GuideDogFilter.OnlyTabableElements;
-        break;
-      }
-    }
-  }
-
-  switchView(treeType: string): void {
-    this.treeName = treeType;
-
-    this.updateFilterType(treeType);
-
-    this.parseTree();
     this._onDidChangeTreeData.fire();
   }
 
+  // updateFilterType(treeType: string): void {
+  //   switch (treeType) {
+  //     case 'Screen Reader': {
+  //       this.filterType = GuideDogFilter.OnlyInteresting;
+  //       break;
+  //     }
+  //     case 'Landmarks': {
+  //       this.filterType = GuideDogFilter.OnlyLandmarks;
+  //       break;
+  //     }
+  //     case 'Tabbable': {
+  //       this.filterType = GuideDogFilter.OnlyTabableElements;
+  //       break;
+  //     }
+  //   }
+  // }
+
+  // switchView(treeType: string): void {
+  //   this.treeName = treeType;
+
+  //   this.updateFilterType(treeType);
+
+  //   this.refresh();
+  // }
+
   private onActiveEditorChanged(): void {
     if (vscode.window.activeTextEditor) {
-      if (vscode.window.activeTextEditor.document.uri.scheme === "file") {
+      if (vscode.window.activeTextEditor.document.uri.scheme === 'file') {
         const enabled =
-          vscode.window.activeTextEditor.document.languageId === "html";
+          vscode.window.activeTextEditor.document.languageId === 'html';
 
         vscode.commands.executeCommand(
-          "setContext",
-          "a11yTreeEnabled",
-          enabled
+          'setContext',
+          'a11yTreeEnabled',
+          enabled,
         );
 
         if (enabled) {
@@ -87,7 +76,7 @@ export class A11yTreeOutlineProvider
         }
       }
     } else {
-      vscode.commands.executeCommand("setContext", "a11yTreeEnabled", false);
+      vscode.commands.executeCommand('setContext', 'a11yTreeEnabled', false);
     }
   }
 
@@ -96,65 +85,55 @@ export class A11yTreeOutlineProvider
       changeEvent.document.uri.toString() ===
       this.editor.document.uri.toString()
     ) {
-      this.parseTree();
-      this._onDidChangeTreeData.fire();
-
-      // TODO: Don't reparse the whole tree
-      // for (const change of changeEvent.contentChanges) {
-      // 	console.log(change);
-      // }
+      this.refresh();
     }
   }
 
   private async parseTree() {
-    this.text = "";
+    this.text = '';
     this.tree = null;
     this.editor = vscode.window.activeTextEditor;
 
     if (this.editor && this.editor.document) {
       this.text = this.editor.document.getText();
 
-      const accessibilityTree = await guideDog(this.text, {
-        filterType: this.filterType
-      });
+      const accessibilityTree = guideDog(this.text, {
+        filterType: this.filterType,
+        sourceCodeLoc: true,
+      }) as AccessibleNodeWithSource[];
 
       this.tree = accessibilityTree;
     }
   }
 
-  // Starts here, falls back into if TreeItem.Expanded
-  getChildren(a11yNode?: a11yNode): Thenable<a11yNode[]> {
-    this.editor = vscode.window.activeTextEditor;
-    if (this.editor && this.editor.document) {
-      if (a11yNode) {
-        const text = this.editor.document.getText();
-
-        return Promise.resolve(
-          guideDog(text, {
-            filterType: this.filterType
-          })
-        );
-      } else {
-        return Promise.resolve([{ name: this.treeName, type: "root" }]);
-      }
+  // Parsing starts here, then falls back into it if TreeItem.Expanded
+  getChildren(a11yNode?: AccessibleNodeWithSource): AccessibleNodeWithSource[] {
+    if (!this.tree) {
+      this.parseTree();
     }
 
-    return Promise.resolve([]);
+    // Does not get called when added children to existing nodes...
+    if (a11yNode) {
+      if (a11yNode.children) {
+        return a11yNode.children as AccessibleNodeWithSource[];
+      }
+
+      return [];
+    } else {
+      return this.tree;
+    }
   }
 
   // required
-  getTreeItem(a11yNode: a11yNode): vscode.TreeItem {
-    const name = a11yNode.name === "" ? a11yNode.role : a11yNode.name;
+  getTreeItem(a11yNode: AccessibleNodeWithSource): vscode.TreeItem {
+    const name = a11yNode.name === '' ? a11yNode.role : a11yNode.name;
+
     let treeItem: vscode.TreeItem = new vscode.TreeItem(
       name,
-      a11yNode.type === "root"
+      a11yNode.children
         ? vscode.TreeItemCollapsibleState.Expanded
-        : vscode.TreeItemCollapsibleState.None
+        : vscode.TreeItemCollapsibleState.None,
     );
-
-    if (a11yNode.type) {
-      return treeItem;
-    }
 
     if (a11yNode.level) {
       treeItem.description = `${a11yNode.role} ${a11yNode.level}`;
@@ -162,21 +141,18 @@ export class A11yTreeOutlineProvider
       treeItem.description = a11yNode.role;
     }
 
-    treeItem.tooltip = a11yNode.html;
+    const sourceRange = new vscode.Range(
+      this.editor.document.positionAt(a11yNode.sourceCodeLoc.startOffset),
+      this.editor.document.positionAt(a11yNode.sourceCodeLoc.endOffset),
+    );
 
-    // TODO: Doesn't take into account repeats
-    const offset = this.text.indexOf(a11yNode.html);
-    const length = a11yNode.html.length;
+    // Html of the tree item
+    treeItem.tooltip = this.editor.document.getText(sourceRange);
 
     treeItem.command = {
-      command: "extension.openA11yTreeSelection",
-      title: "",
-      arguments: [
-        new vscode.Range(
-          this.editor.document.positionAt(offset),
-          this.editor.document.positionAt(offset + length)
-        )
-      ]
+      command: 'extension.openA11yTreeSelection',
+      title: '',
+      arguments: [sourceRange],
     };
 
     return treeItem;
