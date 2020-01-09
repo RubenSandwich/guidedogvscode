@@ -1,15 +1,19 @@
 import * as vscode from 'vscode';
 
+import * as path from 'path';
+
 import {
   guideDog,
   GuideDogFilter,
   AccessibleNodeWithSource,
 } from '@rubennic/guidedog';
 
+type IndexPath = number[];
+
 export class A11yTreeOutlineProvider
-  implements vscode.TreeDataProvider<AccessibleNodeWithSource> {
-  private _onDidChangeTreeData: vscode.EventEmitter<AccessibleNodeWithSource | null> = new vscode.EventEmitter<AccessibleNodeWithSource | null>();
-  readonly onDidChangeTreeData: vscode.Event<AccessibleNodeWithSource | null> = this
+  implements vscode.TreeDataProvider<IndexPath> {
+  private _onDidChangeTreeData: vscode.EventEmitter<IndexPath | null> = new vscode.EventEmitter<IndexPath | null>();
+  readonly onDidChangeTreeData: vscode.Event<IndexPath | null> = this
     ._onDidChangeTreeData.event;
 
   private tree: AccessibleNodeWithSource[];
@@ -28,7 +32,7 @@ export class A11yTreeOutlineProvider
     this.onActiveEditorChanged();
   }
 
-  refresh(a11yNode?: AccessibleNodeWithSource): void {
+  refresh(indexPath?: IndexPath): void {
     this.parseTree();
 
     this._onDidChangeTreeData.fire();
@@ -106,26 +110,50 @@ export class A11yTreeOutlineProvider
     }
   }
 
+  private getA11yNode(
+    indexPath: number[],
+    remainingTree: AccessibleNodeWithSource[] = [],
+  ): AccessibleNodeWithSource {
+    const index = indexPath[0];
+
+    if (indexPath.length === 1) {
+      return remainingTree[index];
+    }
+
+    return this.getA11yNode(
+      indexPath.slice(1),
+      remainingTree[index].children as AccessibleNodeWithSource[],
+    );
+  }
+
   // Parsing starts here, then falls back into it if TreeItem.Expanded
-  getChildren(a11yNode?: AccessibleNodeWithSource): AccessibleNodeWithSource[] {
+  getChildren(indexPath?: IndexPath): IndexPath[] {
     if (!this.tree) {
       this.parseTree();
     }
 
-    // Does not get called when added children to existing nodes...
-    if (a11yNode) {
-      if (a11yNode.children) {
-        return a11yNode.children as AccessibleNodeWithSource[];
-      }
+    // The inital run only goes 3 deep?
+    if (indexPath) {
+      const a11yNode = this.getA11yNode(indexPath, this.tree);
 
-      return [];
-    } else {
-      return this.tree;
+      const indexOfChildren = Array.from(
+        Array(a11yNode.children.length).keys(),
+      );
+
+      return indexOfChildren.map(index => {
+        return [...indexPath, index];
+      });
     }
+
+    return Array.from(Array(this.tree.length).keys()).map(index => {
+      return [index];
+    });
   }
 
   // required
-  getTreeItem(a11yNode: AccessibleNodeWithSource): vscode.TreeItem {
+  getTreeItem(indexPath: IndexPath): vscode.TreeItem {
+    const a11yNode = this.getA11yNode(indexPath, this.tree);
+
     const name = a11yNode.name === '' ? a11yNode.role : a11yNode.name;
 
     let treeItem: vscode.TreeItem = new vscode.TreeItem(
@@ -134,6 +162,29 @@ export class A11yTreeOutlineProvider
         ? vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.None,
     );
+
+    const { valid, invalidReason } = this.validHeaderLevel(a11yNode, indexPath);
+    if (!valid) {
+      treeItem.iconPath = {
+        light: path.join(
+          __filename,
+          '..',
+          '..',
+          'resources',
+          'light',
+          'error.svg',
+        ),
+        dark: path.join(
+          __filename,
+          '..',
+          '..',
+          'resources',
+          'light',
+          'error.svg',
+        ),
+      };
+      treeItem.tooltip = invalidReason;
+    }
 
     if (a11yNode.level) {
       treeItem.description = `${a11yNode.role} ${a11yNode.level}`;
@@ -146,9 +197,6 @@ export class A11yTreeOutlineProvider
       this.editor.document.positionAt(a11yNode.sourceCodeLoc.endOffset),
     );
 
-    // Html of the tree item
-    treeItem.tooltip = this.editor.document.getText(sourceRange);
-
     treeItem.command = {
       command: 'extension.openA11yTreeSelection',
       title: '',
@@ -156,6 +204,65 @@ export class A11yTreeOutlineProvider
     };
 
     return treeItem;
+  }
+
+  getParent(indexPath: IndexPath): IndexPath {
+    if (indexPath.length === 1) {
+      return null;
+    }
+
+    return indexPath.slice(0, -1);
+  }
+
+  private numOfHeaderLevelOnes() {
+    return this.tree.reduce((acc, root) => {
+      if (root.level === 1) {
+        return acc + 1;
+      }
+
+      return acc;
+    }, 0);
+  }
+
+  private validHeaderLevel(
+    a11yNode: AccessibleNodeWithSource,
+    indexPath: IndexPath,
+  ): { valid: boolean; invalidReason?: string } {
+    const parentIndex = this.getParent(indexPath);
+
+    if (parentIndex == null) {
+      if (this.numOfHeaderLevelOnes() != 1 && a11yNode.level == 1) {
+        return {
+          valid: false,
+          invalidReason: 'Only one header levels 1 should exist.',
+        };
+      }
+
+      if (a11yNode.level != 1 && a11yNode.level != 2) {
+        return {
+          valid: false,
+          invalidReason: "Only header levels 1's and 2's can be at root.",
+        };
+      }
+
+      return {
+        valid: true,
+      };
+    }
+
+    const parentNode = this.getA11yNode(parentIndex, this.tree);
+    if (parentNode.level + 1 !== a11yNode.level) {
+      return {
+        valid: false,
+        invalidReason: `Skips a header level. Parent's level is ${
+          parentNode.level
+        }, so this header's level should be ${parentNode.level + 1}.`,
+      };
+    }
+
+    return {
+      valid: true,
+    };
   }
 
   select(range: vscode.Range) {
