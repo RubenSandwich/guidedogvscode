@@ -231,17 +231,26 @@ export class A11yTreeOutlineProvider
     const parentIndex = this.getParent(indexPath);
 
     if (parentIndex == null) {
-      if (this.numOfHeaderLevelOnes() != 1 && a11yNode.level == 1) {
+      const numOfHeaderLevelOnes = this.numOfHeaderLevelOnes();
+
+      if (numOfHeaderLevelOnes === 0) {
         return {
           valid: false,
-          invalidReason: 'Only one header levels 1 should exist.',
+          invalidReason: 'One <h1> should exist.',
+        };
+      }
+
+      if (numOfHeaderLevelOnes != 1 && a11yNode.level == 1) {
+        return {
+          valid: false,
+          invalidReason: 'Only one <h1> should exist.',
         };
       }
 
       if (a11yNode.level != 1 && a11yNode.level != 2) {
         return {
           valid: false,
-          invalidReason: "Only header levels 1's and 2's can be at root.",
+          invalidReason: "Only <h1>'s and <h2>'s should be at root.",
         };
       }
 
@@ -254,9 +263,9 @@ export class A11yTreeOutlineProvider
     if (parentNode.level + 1 !== a11yNode.level) {
       return {
         valid: false,
-        invalidReason: `Skips a header level. Parent's level is ${
+        invalidReason: `Skips a header level. Parent is <h${
           parentNode.level
-        }, so this header's level should be ${parentNode.level + 1}.`,
+        }>, so this header's level should be <h${parentNode.level + 1}>.`,
       };
     }
 

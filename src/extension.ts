@@ -32,7 +32,8 @@ export function activate(context: vscode.ExtensionContext) {
     treeDataProvider: a11yTreeOutlineProvider,
   });
 
-  treeView.message = config.treeType;
+  treeView.message = 'Headers';
+  // treeView.message = config.treeType;
 
   vscode.commands.registerCommand('a11yTree.refresh', () =>
     a11yTreeOutlineProvider.refresh(),

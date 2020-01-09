@@ -30,7 +30,7 @@
       "explorer": [
         {
           "id": "a11yTree",
-          "name": "a11y Tree",
+          "name": "Guide Dog",
           "when": "a11yTreeEnabled"
         }
       ]
